@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>To-Do и Погода в Баку</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-6">
+                <h1>Список задач</h1>
+                <form method="POST" action="/add_task">
+                    <div class="input-group mb-3">
+                        <input type="text" name="task" class="form-control" placeholder="Добавить задачу" required>
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-primary">Добавить</button>
+                        </div>
+                    </div>
+                </form>
+                <ul class="list-group">
+                    {% for task in tasks %}
+                        <li class="list-group-item{% if task.done %} list-group-item-success{% endif %}">
+                            {{ task.task }}
+                            <span class="float-right">
+                                <a href="/edit_task/{{ task.id }}" class="btn btn-warning btn-sm">Редактировать</a>
+                                <a href="/toggle_task/{{ task.id }}" class="btn btn-success btn-sm">Завершить</a>
+                                <a href="/delete_task/{{ task.id }}" class="btn btn-danger btn-sm">Удалить</a>
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ul>
+             </div>
+            <div class="col-md-6">
+                <h1>Погода в Баку</h1>
+                <p id="weather-info">{{ weather }}</p>
+                <button class="btn btn-primary" id="get-weather">Получить погоду</button>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#get-weather').click(function() {
+                $.ajax({
+                    url: '/get_weather',
+                    type: 'GET',
+                    success: function(response) {
+                        $('#weather-info').html(response);
+                    },
+                    error: function() {
+                        $('#weather-info').html('Ошибка при получении погоды');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

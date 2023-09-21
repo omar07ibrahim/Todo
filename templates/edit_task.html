@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Редактировать</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Редактировать</h1>
+        <form method="POST" action="/edit_task/{{ task_id }}">
+            <div class="form-group">
+                <label for="new_task">Новое название</label>
+                <input type="text" name="new_task" class="form-control" placeholder="Edit your task here" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+        </form>
+    </div>
+</body>
+</html>
