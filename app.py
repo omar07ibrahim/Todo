@@ -1,98 +1,139 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+"""Legacy task application with an explicit environment-only secret boundary."""
+
+from __future__ import annotations
+
+import os
+from typing import Any
+
+import requests
+from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
-import requests
+
+
+def _required_signing_secret() -> str:
+    value = os.environ.get("TODO_SECRET_KEY")
+    if value is None or len(value) < 32 or any(character.isspace() for character in value):
+        raise RuntimeError(
+            "TODO_SECRET_KEY must contain at least 32 non-whitespace characters"
+        )
+    return value
+
 
 app = Flask(__name__)
-app.secret_key = 'lopux'
-bootstrap = Bootstrap(app)
-app.app_context().push()
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
+app.secret_key = _required_signing_secret()
+app.config.update(
+    SQLALCHEMY_DATABASE_URI=os.environ.get(
+        "TODO_DATABASE_URL", "sqlite:///tasks.db"
+    ),
+    SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("TODO_COOKIE_SECURE") == "1",
+)
+Bootstrap(app)
 db = SQLAlchemy(app)
 
-def get_weather_in_baku():
-    api_key = '886705b4c1182eb1c69f28eb8c520e20'
-    city = 'Baku'
-    url  = f"https://api.openweathermap.org/data/2.5/weather?q={city}&lang=az&units=metric&appid={api_key}"
 
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        pogoda = data['weather'][0]['description']
-        temperatura = data['main']['temp']
-        return f'Погода в Баку: {pogoda.capitalize()}, Температура: {temperatura}°C'
-    else:
-        print(response)
-        return 'Не удалось получить данные о погоде'
+def get_weather_in_baku() -> str:
+    """Fetch optional weather data without embedding or logging credentials."""
+    api_key = os.environ.get("OPENWEATHER_API_KEY")
+    if not api_key:
+        return "Weather integration is disabled until OPENWEATHER_API_KEY is set."
+
+    try:
+        response = requests.get(
+            "https://api.openweathermap.org/data/2.5/weather",
+            params={
+                "appid": api_key,
+                "lang": "az",
+                "q": "Baku",
+                "units": "metric",
+            },
+            timeout=(2, 5),
+        )
+        response.raise_for_status()
+        data: Any = response.json()
+        description = data["weather"][0]["description"]
+        temperature = data["main"]["temp"]
+    except (KeyError, IndexError, TypeError, ValueError, requests.RequestException):
+        return "Weather data is temporarily unavailable."
+
+    return (
+        f"Weather in Baku: {str(description).capitalize()}, "
+        f"temperature: {temperature}°C"
+    )
+
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     task = db.Column(db.String(200), nullable=False)
     done = db.Column(db.Boolean, default=False)
 
-db.create_all()
 
-@app.route('/get_weather')
+with app.app_context():
+    db.create_all()
+
+
+@app.get("/get_weather")
 def get_weather():
-    weather_info = get_weather_in_baku()
-    return jsonify(weather_info)
+    return jsonify(get_weather_in_baku())
 
-@app.route('/')
+
+@app.get("/")
 def index():
-    tasks = Task.query.all()
-    return render_template('index.html', tasks=tasks)
+    return render_template("index.html", tasks=Task.query.all())
 
-@app.route('/add_task', methods=['POST'])
+
+@app.post("/add_task")
 def add_task():
-    task = request.form.get('task')
+    task = request.form.get("task", "").strip()
     if task:
-        new_task = Task(task=task)
-        db.session.add(new_task)
+        db.session.add(Task(task=task[:200]))
         db.session.commit()
-        flash('Задача добавлена', 'success')
+        flash("Task added", "success")
     else:
-        flash('Введите задачу', 'danger')
-    return redirect(url_for('index'))
+        flash("Enter a task", "danger")
+    return redirect(url_for("index"))
 
-@app.route('/delete_task/<int:id>')
-def delete_task(id):
-    task_to_delete = Task.query.get(id)
-    if task_to_delete:
-        db.session.delete(task_to_delete)
-        db.session.commit()
-        flash('Задача удалена', 'success')
-    else:
-        flash('Неверный индекс задачи', 'danger')
-    return redirect(url_for('index'))
 
-@app.route('/edit_task/<int:id>', methods=['GET', 'POST'])
-def edit_task(id):
-    if request.method == 'POST':
-        new_task = request.form.get('new_task')
-        task_to_edit = Task.query.get(id)
+@app.route("/edit_task/<int:task_id>", methods=["GET", "POST"])
+def edit_task(task_id: int):
+    task_to_edit = db.session.get(Task, task_id)
+    if request.method == "POST":
+        new_task = request.form.get("new_task", "").strip()
         if task_to_edit and new_task:
-            task_to_edit.task = new_task
+            task_to_edit.task = new_task[:200]
             db.session.commit()
-            flash('Задача изменена', 'success')
-            return redirect(url_for('index'))  # Redirect to the index page after editing
-        else:
-            flash('Неверный индекс задачи или пустое поле', 'danger')
-    return render_template('edit_task.html', task_id=id)  # Render an edit_task.html template for GET requests
+            flash("Task updated", "success")
+            return redirect(url_for("index"))
+        flash("Unknown task or empty value", "danger")
+    return render_template("edit_task.html", task_id=task_id)
 
 
-@app.route('/toggle_task/<int:id>')
-def toggle_task(id):
-    task_to_toggle = Task.query.get(id)
+@app.post("/toggle_task/<int:task_id>")
+def toggle_task(task_id: int):
+    task_to_toggle = db.session.get(Task, task_id)
     if task_to_toggle:
         task_to_toggle.done = not task_to_toggle.done
         db.session.commit()
-        flash('Статус задачи изменен', 'success')
+        flash("Task status updated", "success")
     else:
-        flash('Неверный индекс задачи', 'danger')
-    return redirect(url_for('index'))
+        flash("Unknown task", "danger")
+    return redirect(url_for("index"))
 
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True)
+
+@app.post("/delete_task/<int:task_id>")
+def delete_task(task_id: int):
+    task_to_delete = db.session.get(Task, task_id)
+    if task_to_delete:
+        db.session.delete(task_to_delete)
+        db.session.commit()
+        flash("Task deleted", "success")
+    else:
+        flash("Unknown task", "danger")
+    return redirect(url_for("index"))
+
+
+if __name__ == "__main__":
+    app.run(debug=False)

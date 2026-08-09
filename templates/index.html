@@ -1,55 +1,60 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>To-Do и Погода в Баку</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tasks and Baku weather</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
-    <div class="container mt-5">
+    <main class="container mt-5">
         <div class="row">
-            <div class="col-md-6">
-                <h1>Список задач</h1>
-                <form method="POST" action="/add_task">
+            <section class="col-md-7" aria-labelledby="tasks-heading">
+                <h1 id="tasks-heading">Tasks</h1>
+                <form method="post" action="/add_task">
                     <div class="input-group mb-3">
-                        <input type="text" name="task" class="form-control" placeholder="Добавить задачу" required>
+                        <label class="sr-only" for="new-task">New task</label>
+                        <input id="new-task" type="text" name="task" maxlength="200" class="form-control" placeholder="Add a task" required>
                         <div class="input-group-append">
-                            <button type="submit" class="btn btn-primary">Добавить</button>
+                            <button type="submit" class="btn btn-primary">Add</button>
                         </div>
                     </div>
                 </form>
                 <ul class="list-group">
                     {% for task in tasks %}
-                        <li class="list-group-item{% if task.done %} list-group-item-success{% endif %}">
-                            {{ task.task }}
-                            <span class="float-right">
-                                <a href="/edit_task/{{ task.id }}" class="btn btn-warning btn-sm">Редактировать</a>
-                                <a href="/toggle_task/{{ task.id }}" class="btn btn-success btn-sm">Завершить</a>
-                                <a href="/delete_task/{{ task.id }}" class="btn btn-danger btn-sm">Удалить</a>
-                            </span>
-                        </li>
+                    <li class="list-group-item{% if task.done %} list-group-item-success{% endif %}">
+                        {{ task.task }}
+                        <div class="float-right d-flex">
+                            <a href="/edit_task/{{ task.id }}" class="btn btn-warning btn-sm mr-1">Edit</a>
+                            <form method="post" action="/toggle_task/{{ task.id }}" class="mr-1">
+                                <button type="submit" class="btn btn-success btn-sm">Toggle</button>
+                            </form>
+                            <form method="post" action="/delete_task/{{ task.id }}">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-muted">No tasks yet.</li>
                     {% endfor %}
                 </ul>
-             </div>
-            <div class="col-md-6">
-                <h1>Погода в Баку</h1>
-                <p id="weather-info">{{ weather }}</p>
-                <button class="btn btn-primary" id="get-weather">Получить погоду</button>
-            </div>
+            </section>
+            <section class="col-md-5" aria-labelledby="weather-heading">
+                <h2 id="weather-heading">Baku weather</h2>
+                <p id="weather-info" aria-live="polite">Weather has not been requested.</p>
+                <button class="btn btn-primary" id="get-weather" type="button">Get weather</button>
+            </section>
         </div>
-    </div>
+    </main>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script>
-        $(document).ready(function() {
-            $('#get-weather').click(function() {
+        $(function() {
+            $('#get-weather').on('click', function() {
                 $.ajax({
                     url: '/get_weather',
                     type: 'GET',
-                    success: function(response) {
-                        $('#weather-info').html(response);
-                    },
-                    error: function() {
-                        $('#weather-info').html('Ошибка при получении погоды');
-                    }
+                    success: function(response) { $('#weather-info').text(response); },
+                    error: function() { $('#weather-info').text('Weather request failed.'); }
                 });
             });
         });
