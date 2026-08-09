@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   capture:
-    if: github.event.head_commit.message == 'Trigger hosted PlanForge evidence capture' && github.actor == 'omar07ibrahim'
+    if: startsWith(github.event.head_commit.message, 'Capture PlanForge evidence:') && github.actor == 'omar07ibrahim'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:

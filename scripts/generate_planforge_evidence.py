@@ -140,7 +140,7 @@ def _terminal_png(commands: list[dict[str, Any]], plan: dict[str, Any]) -> bytes
     draw.ellipse((76, 68, 94, 86), fill="#ff6b7a")
     draw.ellipse((104, 68, 122, 86), fill="#ffbd6b")
     draw.ellipse((132, 68, 150, 86), fill="#61d6a8")
-    draw.text((178, 65), "planforge · executed CLI proof", font=regular, fill="#f7f8fc")
+    draw.text((178, 65), "planforge | executed CLI proof", font=regular, fill="#f7f8fc")
     lines = [
         ("$ python -m planforge solve --request launch-day.request.json --output proof", "#8da8ff"),
         (commands[0]["stdout"].strip(), "#b8c4dc"),
@@ -158,7 +158,7 @@ def _terminal_png(commands: list[dict[str, Any]], plan: dict[str, Any]) -> bytes
             draw.text((78, y), chunk, font=small, fill=color)
             y += 34
         y += 8
-    draw.text((78, 738), "Synthetic fixture · stdout captured byte-for-byte · stderr empty", font=small, fill="#7f8ba8")
+    draw.text((78, 738), "Synthetic fixture | stdout captured byte-for-byte | stderr empty", font=small, fill="#7f8ba8")
     output = io.BytesIO()
     image.save(output, format="PNG", optimize=False, compress_level=9)
     return output.getvalue()
@@ -173,7 +173,7 @@ def _gantt_svg(request: PlanningRequest, plan: dict[str, Any]) -> bytes:
         block_width = round((item["end_minute"] - item["start_minute"]) * chart / request.horizon_minutes)
         color = ("#7c9cff", "#61d6a8", "#ffbd6b", "#e68cff")[index % 4]
         rows.append(f'<text x="34" y="{y + 24}" fill="#dce4f7" font-size="15">{escape(item["task_id"])}</text><rect x="{x}" y="{y}" width="{block_width}" height="34" rx="8" fill="{color}"/><text x="{x + 8}" y="{y + 22}" fill="#08101f" font-size="12" font-weight="700">{item["start_minute"] // 60:02d}:{item["start_minute"] % 60:02d}</text>')
-    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}"><title>Executed PlanForge schedule</title><desc>Gantt chart generated from the independently verified launch-day plan.</desc><rect width="1200" height="520" rx="24" fill="#080d19"/><text x="34" y="46" fill="#61d6a8" font-size="14" font-weight="700">EXECUTED OPTIMAL SCHEDULE</text><text x="34" y="78" fill="#f7f8fc" font-size="25" font-weight="700">Seven dependency-safe tasks inside one hard horizon</text><line x1="{left}" y1="98" x2="{left + chart}" y2="98" stroke="#33415f"/>{''.join(rows)}<text x="34" y="490" fill="#8290ac" font-size="13">Plan {plan['request_sha256'][:12]} · total priority {plan['objective']['total_priority']} · tardiness {plan['objective']['total_tardiness_minutes']}m</text></svg>'''
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}"><title>Executed PlanForge schedule</title><desc>Gantt chart generated from the independently verified launch-day plan.</desc><rect width="1200" height="520" rx="24" fill="#080d19"/><text x="34" y="46" fill="#61d6a8" font-size="14" font-weight="700">EXECUTED OPTIMAL SCHEDULE</text><text x="34" y="78" fill="#f7f8fc" font-size="25" font-weight="700">Seven dependency-safe tasks inside one hard horizon</text><line x1="{left}" y1="98" x2="{left + chart}" y2="98" stroke="#33415f"/>{''.join(rows)}<text x="34" y="490" fill="#8290ac" font-size="13">Plan {plan['request_sha256'][:12]} | total priority {plan['objective']['total_priority']} | tardiness {plan['objective']['total_tardiness_minutes']}m</text></svg>'''
     return svg.encode("ascii")
 
 
@@ -198,7 +198,7 @@ def _proof_svg(plan: dict[str, Any], verification: dict[str, Any]) -> bytes:
         (46, "Bounded request", "strict schema + DAG"),
         (326, "Exact planner", f"{plan['proof']['expanded_states']} states"),
         (606, "Independent verifier", f"{verification['verified_feasible_sequences']} feasible sequences"),
-        (886, "Hash receipt", verification["plan_sha256"][:12] + "…"),
+        (886, "Hash receipt", verification["plan_sha256"][:12] + "..."),
     )
     body = []
     for index, (x, title, subtitle) in enumerate(boxes):
