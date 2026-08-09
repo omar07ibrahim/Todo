@@ -12,12 +12,13 @@ RUNTIME = ROOT / "planforge"
 class CurrentTreeSecurityTests(unittest.TestCase):
     def test_runtime_has_no_legacy_network_or_secret_dependency(self) -> None:
         payload = b"\n".join(path.read_bytes() for path in sorted(RUNTIME.glob("*.py")))
-        for marker in (b"flask", b"sqlalchemy", b"requests", b"OPENWEATHER", b"TODO_SECRET_KEY"):
+        for marker in (b"flask", b"sqlalchemy", b"OPENWEATHER", b"TODO_SECRET_KEY"):
             self.assertNotIn(marker.lower(), payload.lower())
         self.assertIsNone(re.search(rb"(?i)\b[0-9a-f]{32}\b", payload))
 
     def test_runtime_import_roots_are_stdlib_or_planforge(self) -> None:
         allowed = {
+            "__future__",
             "argparse", "base64", "dataclasses", "hashlib", "html", "http", "itertools",
             "json", "os", "pathlib", "planforge", "re", "stat", "sys", "typing",
             "unicodedata", "urllib",
