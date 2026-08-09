@@ -1,4 +1,4 @@
-"""Dependency-free command line interface for exact plans and receipts."""
+"""Dependency-free command line interface for plans, receipts, and local UI."""
 
 from __future__ import annotations
 
@@ -15,11 +15,7 @@ from planforge.planner import solve
 from planforge.verifier import verify_plan
 
 BUNDLE_FILES = frozenset({"plan.json", "request.json", "verification.json"})
-BUNDLE_LIMITS = {
-    "plan.json": 1_048_576,
-    "request.json": MAX_REQUEST_BYTES,
-    "verification.json": 262_144,
-}
+BUNDLE_LIMITS = {"plan.json": 1_048_576, "request.json": MAX_REQUEST_BYTES, "verification.json": 262_144}
 
 
 def _pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -33,43 +29,28 @@ def _pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 def _load(payload: bytes) -> Any:
     try:
-        text = payload.decode("utf-8", errors="strict")
         return json.loads(
-            text,
+            payload.decode("utf-8", errors="strict"),
             object_pairs_hook=_pairs,
-            parse_constant=lambda _value: (_ for _ in ()).throw(
-                ContractError("non-finite JSON number is forbidden")
-            ),
+            parse_constant=lambda _value: (_ for _ in ()).throw(ContractError("non-finite JSON number is forbidden")),
         )
     except (UnicodeError, json.JSONDecodeError) as error:
         raise ContractError("input is not strict UTF-8 JSON") from error
 
 
+def _request(path: Path) -> PlanningRequest:
+    return PlanningRequest.from_document(_load(read_regular(path, MAX_REQUEST_BYTES)))
+
+
 def _summary(status: str, verification: dict[str, Any]) -> bytes:
-    return canonical_bytes(
-        {
-            "objective": verification["objective"],
-            "plan_sha256": verification["plan_sha256"],
-            "request_sha256": verification["request_sha256"],
-            "status": status,
-        }
-    )
+    return canonical_bytes({"objective": verification["objective"], "plan_sha256": verification["plan_sha256"], "request_sha256": verification["request_sha256"], "status": status})
 
 
 def _solve(request_path: Path, output: Path) -> bytes:
-    request = PlanningRequest.from_document(
-        _load(read_regular(request_path, MAX_REQUEST_BYTES))
-    )
+    request = _request(request_path)
     plan = solve(request)
     verification = verify_plan(request, plan)
-    publish_bundle(
-        output,
-        {
-            "plan.json": canonical_bytes(plan),
-            "request.json": canonical_bytes(request.to_document()),
-            "verification.json": canonical_bytes(verification),
-        },
-    )
+    publish_bundle(output, {"plan.json": canonical_bytes(plan), "request.json": canonical_bytes(request.to_document()), "verification.json": canonical_bytes(verification)})
     return _summary("solved", verification)
 
 
@@ -88,6 +69,24 @@ def _verify(output: Path) -> bytes:
     return _summary("verified", expected)
 
 
+def _serve(request_path: Path, host: str, port: int) -> int:
+    from planforge.web import Dashboard, make_server
+
+    dashboard = Dashboard.build(_request(request_path))
+    server = make_server(dashboard, host=host, port=port)
+    address = server.server_address
+    shown_host = "[::1]" if host == "::1" else host
+    sys.stdout.buffer.write(canonical_bytes({"request_sha256": dashboard.verification["request_sha256"], "status": "serving", "url": f"http://{shown_host}:{address[1]}/"}))
+    sys.stdout.buffer.flush()
+    try:
+        server.serve_forever(poll_interval=0.1)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+    return 0
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="planforge")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -96,6 +95,10 @@ def _parser() -> argparse.ArgumentParser:
     solve_parser.add_argument("--output", required=True, type=Path)
     verify_parser = subparsers.add_parser("verify", help="independently verify a bundle")
     verify_parser.add_argument("--bundle", required=True, type=Path)
+    serve_parser = subparsers.add_parser("serve", help="serve one verified plan on loopback")
+    serve_parser.add_argument("--request", required=True, type=Path)
+    serve_parser.add_argument("--host", choices=("127.0.0.1", "::1"), default="127.0.0.1")
+    serve_parser.add_argument("--port", type=int, default=8000)
     return parser
 
 
@@ -104,8 +107,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if arguments.command == "solve":
             payload = _solve(arguments.request, arguments.output)
-        else:
+        elif arguments.command == "verify":
             payload = _verify(arguments.bundle)
+        else:
+            return _serve(arguments.request, arguments.host, arguments.port)
     except (ContractError, OSError, ValueError):
         sys.stderr.buffer.write(canonical_bytes({"error": "invalid_input", "status": "error"}))
         return 2
