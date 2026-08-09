@@ -27,7 +27,7 @@ The first five components are the public objective vector. The final sequence ru
 
 ## Proof claim
 
-For at most nine tasks, the exact engine will enumerate every feasible topological sequence, with only an admissible optimistic-priority bound allowed to prune branches. A result may claim `optimal: true` only after the search closes and an implementation-independent verifier reproduces the optimum from the original request.
+For at most nine tasks, the exact engine enumerates every feasible topological sequence, with only an admissible optimistic-priority bound allowed to prune branches. A result claims `optimal: true` only after the search closes and an implementation-independent verifier reproduces the optimum from the original request.
 
 ## Non-claims
 

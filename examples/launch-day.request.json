@@ -1,0 +1,79 @@
+{
+  "horizon_minutes": 420,
+  "schema": "planforge.request.v1",
+  "start_minute": 540,
+  "tasks": [
+    {
+      "dependencies": ["review"],
+      "due_minute": 885,
+      "duration_minutes": 45,
+      "earliest_start_minute": 540,
+      "id": "deploy",
+      "priority": 100,
+      "title": "Deploy release candidate"
+    },
+    {
+      "dependencies": ["patch"],
+      "due_minute": 900,
+      "duration_minutes": 75,
+      "earliest_start_minute": 540,
+      "id": "docs",
+      "priority": 55,
+      "title": "Publish operator notes"
+    },
+    {
+      "dependencies": [],
+      "due_minute": 960,
+      "duration_minutes": 120,
+      "earliest_start_minute": 540,
+      "id": "experiment",
+      "priority": 70,
+      "title": "Prototype ranking experiment"
+    },
+    {
+      "dependencies": [],
+      "due_minute": 780,
+      "duration_minutes": 60,
+      "earliest_start_minute": 660,
+      "id": "mentoring",
+      "priority": 40,
+      "title": "Mentoring session"
+    },
+    {
+      "dependencies": ["triage"],
+      "due_minute": 750,
+      "duration_minutes": 90,
+      "earliest_start_minute": 540,
+      "id": "patch",
+      "priority": 100,
+      "title": "Implement priority patch"
+    },
+    {
+      "dependencies": ["patch"],
+      "due_minute": 825,
+      "duration_minutes": 60,
+      "earliest_start_minute": 540,
+      "id": "review",
+      "priority": 90,
+      "title": "Review patched build"
+    },
+    {
+      "dependencies": ["deploy"],
+      "due_minute": 960,
+      "duration_minutes": 45,
+      "earliest_start_minute": 540,
+      "id": "retrospective",
+      "priority": 30,
+      "title": "Capture release retrospective"
+    },
+    {
+      "dependencies": [],
+      "due_minute": 630,
+      "duration_minutes": 45,
+      "earliest_start_minute": 540,
+      "id": "triage",
+      "priority": 45,
+      "title": "Triage release blockers"
+    }
+  ]
+}
