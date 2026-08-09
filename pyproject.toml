@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools==83.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "planforge-exact"
+version = "0.3.0"
+description = "Exact dependency-aware planning with independently verified proof receipts"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "Omar Ibrahim"}]
+dependencies = []
+keywords = ["planning", "scheduling", "operations-research", "classical-ai", "verification"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.scripts]
+planforge = "planforge.cli:main"
+
+[project.urls]
+Repository = "https://github.com/omar07ibrahim/Todo"
+Issues = "https://github.com/omar07ibrahim/Todo/issues"
+
+[tool.setuptools]
+packages = ["planforge"]

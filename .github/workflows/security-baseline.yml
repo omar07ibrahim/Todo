@@ -31,6 +31,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Compile the sanitized application
-        run: python -m py_compile app.py tests/test_security_baseline.py
-      - name: Verify the current-tree credential boundary
+        run: python -m compileall -q app.py planforge scripts tests
+      - name: Verify the current-tree security boundary
         run: python -m unittest discover -s tests -v

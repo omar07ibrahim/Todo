@@ -1,16 +1,19 @@
 # Security policy
 
-Please report vulnerabilities through GitHub private vulnerability reporting rather than a public issue.
+Please use GitHub private vulnerability reporting instead of a public issue for security-sensitive reports.
 
-## Credential handling
+## Supported boundary
 
-- Runtime secrets belong only in environment variables or ignored local files.
-- Never commit `.env`, database files, access tokens, API keys, or real task data.
-- Treat every credential that has appeared in public Git history as compromised and revoke it at the issuing provider.
-- A deletion commit does not purge historical Git objects.
+Only the latest protected `main` branch is supported. PlanForge is a local, dependency-free planner, not an internet service. Its HTTP dashboard binds only to `127.0.0.1` or `::1`, rejects non-loopback Host headers, serves three exact read-only routes, and attaches a hash-bound Content Security Policy plus no-store, nosniff, same-origin, no-referrer, and restrictive permissions headers.
 
-The optional weather integration is disabled without `OPENWEATHER_API_KEY`. The required Flask signing value is read from `TODO_SECRET_KEY` and must contain at least 32 non-whitespace characters.
+Planning JSON is untrusted. The parser enforces exact fields, strict types, a 64 KiB canonical request bound, 1–9 tasks, 15-minute slots, one-day horizons, canonical identifiers, bounded control-free titles, known dependencies, and an acyclic graph. CLI reads reject symlinks, changing files, multi-link inputs, oversized content, duplicate JSON keys, and non-finite numbers. Output directories are no-clobber and files are mode `0600`; an interrupted partial directory is rejected because the verifier requires the exact three-file inventory.
 
-## Supported state
+The browser evidence lane is CI-only. It uses synthetic data, a platform-digest-pinned Playwright/Chromium image, hash-locked Python wheels, no container network, a read-only root filesystem, a non-root user, dropped capabilities, no new privileges, and no repository write token. The runtime wheel contains none of those evidence dependencies.
 
-Only the latest protected default branch is supported. This legacy containment baseline is not yet recommended for internet deployment; its documented current boundary remains part of the security contract.
+## Data and claim limits
+
+Task titles can be sensitive. Plan bundles and dashboard output reproduce them, so keep bundles private when source data is private. Hash receipts prove exact byte relationships and independent recomputation; they do not prove that human estimates, priorities, or deadlines are correct.
+
+## Historical credential notice
+
+The 2023 prototype committed credential material before this rewrite. Current `main` contains no runtime credential and never calls that provider, but deletion from the tip does not purge public Git history. Every historical provider credential must be treated as exposed and revoked by Omar at the provider. Do not reuse it.
