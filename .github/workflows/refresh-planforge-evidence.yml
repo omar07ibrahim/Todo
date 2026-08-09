@@ -1,12 +1,8 @@
 name: Refresh PlanForge evidence
 
 on:
-  workflow_dispatch:
-    inputs:
-      expected_sha:
-        description: Exact branch SHA authorized for capture
-        required: true
-        type: string
+  push:
+    branches: [portfolio/planforge-exact-planner]
 
 permissions:
   contents: write
@@ -17,6 +13,7 @@ concurrency:
 
 jobs:
   capture:
+    if: github.event.head_commit.message == 'Trigger hosted PlanForge evidence capture' && github.actor == 'omar07ibrahim'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
@@ -35,7 +32,6 @@ jobs:
           set -euo pipefail
           test "$GITHUB_ACTOR" = "omar07ibrahim"
           test "$GITHUB_REF" = "refs/heads/portfolio/planforge-exact-planner"
-          test "${{ inputs.expected_sha }}" = "$GITHUB_SHA"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test -z "$(git symbolic-ref -q HEAD || true)"
           SOURCE_REVISION="$(git log -1 --format=%H -- \
