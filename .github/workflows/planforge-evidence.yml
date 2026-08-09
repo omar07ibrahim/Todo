@@ -1,0 +1,134 @@
+name: PlanForge evidence
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: planforge-evidence-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence:
+    name: Visual evidence drift (Chromium 151)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CONTAINER_IMAGE: mcr.microsoft.com/playwright/python@sha256:51d31fdfacb0cff99a1a724152e34ae408d2bd4e7da310ff157450f49261cc59
+    steps:
+      - name: Check out the exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Derive the source-bound evidence revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          SOURCE_REVISION="$(git log -1 --format=%H -- \
+            docs/planning-contract.md \
+            examples/launch-day.request.json \
+            planforge \
+            requirements/evidence-browser.txt \
+            requirements/evidence-browser-image.lock.json \
+            scripts/generate_planforge_evidence.py \
+            scripts/verify_planforge_evidence.py)"
+          SOURCE_TREE="$(git rev-parse "$SOURCE_REVISION^{tree}")"
+          for value in "$SOURCE_REVISION" "$SOURCE_TREE"; do
+            test "${#value}" -eq 40
+            case "$value" in *[!0-9a-f]*) exit 1;; esac
+          done
+          echo "SOURCE_REVISION=$SOURCE_REVISION" >>"$GITHUB_ENV"
+          echo "SOURCE_TREE=$SOURCE_TREE" >>"$GITHUB_ENV"
+
+      - name: Set up exact wheel-download Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v6.2.0
+        with:
+          python-version: "3.12.3"
+
+      - name: Download the hash-locked evidence wheels
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/evidence-wheelhouse"
+          python -m pip download \
+            --require-hashes \
+            --only-binary=:all: \
+            --dest "$RUNNER_TEMP/evidence-wheelhouse" \
+            -r requirements/evidence-browser.txt
+          test "$(find "$RUNNER_TEMP/evidence-wheelhouse" -maxdepth 1 -type f | wc -l)" -eq 5
+
+      - name: Pull the platform-pinned browser image
+        run: |
+          set -euo pipefail
+          docker pull --platform linux/amd64 "$CONTAINER_IMAGE"
+          test "$(docker image inspect "$CONTAINER_IMAGE" --format '{{.Architecture}}/{{.Os}}')" = "amd64/linux"
+
+      - name: Regenerate and independently verify the complete bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate="$RUNNER_TEMP/planforge-evidence"
+          docker run --rm \
+            --platform linux/amd64 \
+            --pull=never \
+            --network=none \
+            --read-only \
+            --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --pids-limit=512 \
+            --memory=4g \
+            --cpus=2 \
+            --shm-size=1g \
+            --tmpfs /tmp:rw,exec,nosuid,nodev,size=2147483648 \
+            --user "$(id -u):$(id -g)" \
+            --env HOME=/tmp/home \
+            --env PYTHONNOUSERSITE=1 \
+            --env PYTHONPATH=/src:/tmp/evidence-python \
+            --volume "$GITHUB_WORKSPACE:/src:ro" \
+            --volume "$RUNNER_TEMP/evidence-wheelhouse:/wheelhouse:ro" \
+            --volume "$RUNNER_TEMP:/out:rw" \
+            --entrypoint bash \
+            "$CONTAINER_IMAGE" \
+            -euo pipefail -c '
+              mkdir -p "$HOME" /tmp/evidence-python
+              python -m pip install \
+                --no-index \
+                --find-links=/wheelhouse \
+                --target=/tmp/evidence-python \
+                Pillow==12.3.0 \
+                playwright==1.62.0
+              python /src/scripts/generate_planforge_evidence.py \
+                --output-root /out/planforge-evidence \
+                --source-revision "'"$SOURCE_REVISION"'" \
+                --source-tree "'"$SOURCE_TREE"'" \
+                --container-image "'"$CONTAINER_IMAGE"'"
+              python /src/scripts/verify_planforge_evidence.py verify \
+                /out/planforge-evidence \
+                --source-revision "'"$SOURCE_REVISION"'" \
+                --source-tree "'"$SOURCE_TREE"'"
+            '
+          test "$(find "$candidate" -type f | wc -l)" -eq 11
+          test -z "$(find "$candidate" -type l -print -quit)"
+          while IFS= read -r relative; do
+            cmp "$candidate/$relative" "$relative"
+          done <<'FILES'
+          docs/assets/planforge-dashboard.png
+          docs/assets/planforge-mobile.png
+          docs/assets/planforge-full-page.png
+          docs/assets/planforge-interaction.gif
+          docs/assets/planforge-cli.png
+          docs/assets/planforge-gantt.svg
+          docs/assets/planforge-horizon-curve.svg
+          docs/assets/planforge-proof-flow.svg
+          docs/assets/planforge-plan.json
+          docs/assets/planforge-verification.json
+          docs/assets/planforge-evidence.json
+          FILES
+          test -z "$(git status --porcelain --untracked-files=all)"
