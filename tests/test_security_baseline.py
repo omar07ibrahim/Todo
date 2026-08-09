@@ -35,6 +35,16 @@ class SanitizedSourceTests(unittest.TestCase):
         self.assertIn("params", keywords)
         self.assertIn("timeout", keywords)
 
+    def test_provider_failures_and_values_are_not_printed(self) -> None:
+        print_calls = [
+            node
+            for node in ast.walk(self.tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "print"
+        ]
+        self.assertEqual(print_calls, [])
+
     def test_mutating_routes_are_post_only_in_the_template(self) -> None:
         template = TEMPLATE.read_text(encoding="utf-8")
         self.assertNotIn('href="/delete_task/', template)
@@ -42,11 +52,20 @@ class SanitizedSourceTests(unittest.TestCase):
         self.assertIn('method="post" action="/delete_task/', template)
         self.assertIn('method="post" action="/toggle_task/', template)
 
+    def test_debug_mode_is_not_environment_activated(self) -> None:
+        self.assertIn("app.run(debug=False)", self.source)
+
     def test_local_secret_and_database_files_are_ignored(self) -> None:
         ignored = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
         self.assertIn(".env", ignored)
         self.assertIn("instance/", ignored)
         self.assertIn("tasks.db", ignored)
+
+    def test_history_and_revocation_boundary_is_documented_twice(self) -> None:
+        for relative in ("README.md", "SECURITY.md"):
+            document = (ROOT / relative).read_text(encoding="utf-8").lower()
+            self.assertIn("git history", document)
+            self.assertIn("revoke", document)
 
 
 if __name__ == "__main__":
