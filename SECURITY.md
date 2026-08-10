@@ -1,6 +1,6 @@
 # Security policy
 
-Please use GitHub private vulnerability reporting instead of a public issue for security-sensitive reports.
+Please use [GitHub private vulnerability reporting](https://github.com/omar07ibrahim/Todo/security/advisories/new) instead of a public issue for security-sensitive reports.
 
 ## Supported boundary
 

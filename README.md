@@ -136,3 +136,14 @@ See [visual evidence provenance](docs/visual-evidence.md), the [machine manifest
 This repository began as Omar's small 2023 Flask Todo experiment and was rebuilt incrementally rather than replaced with a new repository. That preserves the learning history, including a serious lesson: the old prototype committed credential material. Current `main` contains no runtime credential or legacy provider call, but deleting it from the tip does not purge Git history. Omar must treat every historical provider credential as exposed and revoke it at the provider; no historical value is reused or repeated here.
 
 MIT © Omar Ibrahim. See [LICENSE](LICENSE).
+## Maintenance and release boundary
+
+The maintained package source is `0.3.0`. Development and evidence rules are
+in [CONTRIBUTING.md](CONTRIBUTING.md), and notable source changes are recorded
+in [CHANGELOG.md](CHANGELOG.md).
+
+No release is published until Omar confirms that every credential from the
+historical prototype has been revoked at its provider. Current code, packages,
+fixtures, receipts, and visual evidence contain no credential material; a
+green current-tree scan cannot revoke a value that once appeared in public
+history.
