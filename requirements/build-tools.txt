@@ -1,5 +1,5 @@
 # Exact build-only tools. The wheel itself has zero runtime dependencies.
-build==1.5.0
+build==1.6.0
 packaging==26.3
 pyproject-hooks==1.2.0
-setuptools==83.0.0
+setuptools==84.0.0
